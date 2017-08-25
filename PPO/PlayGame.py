@@ -1,7 +1,7 @@
 import multiprocessing as mp
 import gym
 import numpy as np
-
+from joblib import Parallel, delayed
 # Random agent
 class RandomAgent:
     def __init__(self,randint=6):
@@ -25,9 +25,11 @@ class PlayGym:
         self.gamename = gamename
         self.replays = replays
         self.workers = workers
-        self.games = [gym.make(gamename) for i in range(workers)]
         
-    def play_game(self,env):
+    def play_game(self,env=None):
+        if env is None:
+            env = gym.make("Pong-v0")
+            
         obs = env.reset()
         agent = self.agent
         obs_hist = []
@@ -49,58 +51,7 @@ class PlayGym:
         reward_hist = np.array(reward_hist)
         action_hist = np.array(action_hist)
         print('Game done.')
-        return {'obs_hist' : obs_hist,'action_hist': action_hist, 'reward_hist' : reward_hist}
-    def play_games(self,env):
-        return [self.play_game(env) for i in range(self.replays)]     
-    
-    def worker_parallel(self,g,queue):
-        game_results = self.play_games(g)
-        queue.put(game_results)
+        return {'obs' : obs_hist,'action': action_hist, 'reward' : reward_hist}
         
-    def play_parallel_queue(self):
-        queue = mp.Queue()
-        processes = []
-        rets = []
-        for i, g in enumerate(self.games):
-            p = mp.Process(target=self.worker_parallel, args=(g,queue))
-            processes.append(p)
-            p.start()
-        for p in processes:
-            ret = queue.get() # will block
-            rets.append(ret)
-        for p in processes:
-            p.join()
-        return rets
-
-    def play_parallel_oldqueue(self):
-        jobs = []
-        game_results = {}
-        queue = mp.Queue()
-        queue.put(game_results)
-
-        for i,g in enumerate(self.games):
-            p = mp.Process(target=self.worker_parallel, args=(g,queue))
-            jobs.append(p)
-            p.start()
-
-        for proc in jobs:
-            proc.join()
-        return True #game_results.values()
-
-    
-    
-
-        
-    def play_parallel_manager(self):
-        jobs = []
-        manager = mp.Manager()
-        game_results = manager.dict()
-
-        for i,g in enumerate(self.games):
-            p = mp.Process(target=self.worker_parallel, args=(g,queue))
-            jobs.append(p)
-            p.start()
-
-        for proc in jobs:
-            proc.join()
-        return True #game_results.values()
+    def play_multiple_games(self):
+        return Parallel(n_jobs=self.workers)(delayed(self.play_game)() for g in range(self.replays))
