@@ -56,7 +56,6 @@ class PlayGym:
         action_hist = np.array(action_hist)
         #print('Game done.')
         return {'obs' : obs_hist,'action': action_hist, 'reward' : reward_hist}
-    
     def play_games(self, env=None):
         if env is None:
             env = gym.make(self.gamename)
@@ -64,11 +63,19 @@ class PlayGym:
         game_results = []
         for _ in range(self.worker_replays):
             game_results.append(self.play_game(env))
-        return game_results
+            
+        filename = 'tmp/'+ str(np.random.rand()) + '.pickle'
+        f = open(filename, 'wb')
+        cPickle.dump(game_results, f)
+        f.close()
+        return filename
     
     def play_multiple_games(self):
-        results = Parallel(n_jobs=self.workers)(delayed(self.play_games)() for g in range(self.workers))
+        outfiles = Parallel(n_jobs=self.workers)(delayed(self.play_games)() for g in range(self.workers))
+        results = []
+        for filename in outfiles:
+            f = open(filename,'rb')
+            results.extend(cPickle.load(f))
+            f.close()
+            os.remove(filename)
         return results
-            
-            
-            
