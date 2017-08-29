@@ -4,6 +4,11 @@ from joblib import Parallel, delayed
 import _pickle as cPickle
 import os
 
+#%matplotlib inline
+import matplotlib.pyplot as plt
+def plot_frame(frame):
+    return plt.imshow(frame.reshape((80,80)))
+
 # Random agent
 class RandomAgent:
     def __init__(self,randint=6):
@@ -12,17 +17,11 @@ class RandomAgent:
     def predict(self, state):
         return np.random.randint(self.randint)
 
-def concat_games(games):
-    '''send in list of results from playgame in PlayGym'''
-    allgames = {}
-    for k in games[0].keys():
-        store = [g[k] for g in games]
-        allgames[k] = np.concatenate(store,0)
-    return allgames
 
 class PlayGym:
     def __init__(self,gamename,workers=5,replays=6):
         self.gamename = gamename
+        #self.env = gym.make(self.gamename)
         self.replays = replays
         self.workers = workers
         self.worker_replays = round(replays/workers)
@@ -55,7 +54,11 @@ class PlayGym:
         reward_hist = np.array(reward_hist)
         action_hist = np.array(action_hist)
         #print('Game done.')
-        return {'obs' : obs_hist,'action': action_hist, 'reward' : reward_hist}
+        full_result = {'obs' : obs_hist,'action': action_hist, 'reward' : reward_hist}
+        
+        # Process result according to 
+        processed_result = self.agent.process_one_game(full_result)
+        return processed_result
     
     def play_games(self, env=None):
         if env is None:
