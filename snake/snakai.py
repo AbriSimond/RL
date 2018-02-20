@@ -91,9 +91,11 @@ class Snake:
     windowWidth = 500
     box_size = 20
 
-    def __init__(self, render = True, game_size = (10,10)):
+    def __init__(self, render = True, game_size = (10,10), time_reward = -0.02):
         self.game_size = game_size
         self.render = render
+        self.time_reward = time_reward
+        
         pygame.init()
         if render:
             self._display_surf = pygame.display.set_mode((self.windowWidth,self.windowHeight), pygame.HWSURFACE)
@@ -147,12 +149,12 @@ class Snake:
 
     def on_loop(self):
         self.player.update()
-        self.reward = -0.02
+        self.reward = self.time_reward
         # does snake collide with wall?
         for x, y in zip(self.wall.X, self.wall.Y):
             if self.isCollision(x,y,self.player.x[0], self.player.y[0]):
                 #print("You lose! Wall collision. Length: %d" % self.player.length)
-                self.reward = -1
+                self.reward = -1.0
                 self.ended = True
 
 
@@ -160,7 +162,7 @@ class Snake:
         for i in range(2,self.player.length):
             if self.isCollision(self.player.x[0],self.player.y[0],self.player.x[i], self.player.y[i]):
                 #print("You lose! Self-collision. Length: %d" % self.player.length)
-                self.reward = -1
+                self.reward = -1.0
                 self.ended = True
 
         # does snake eat apple?
@@ -169,10 +171,9 @@ class Snake:
                 self.player.length = self.player.length + 1
                 self.apple.x = randint(1,self.game_size[0]-2)
                 self.apple.y = randint(1,self.game_size[1]-2)
-                self.reward = 1
+                self.reward = 1.0
 
     def step(self, action):
-
         if action=="right":
             self.player.moveRight()
         elif action=="left":
