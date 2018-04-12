@@ -56,6 +56,7 @@ class PlayGym:
         action_hist = np.array(action_hist)
         #print('Game done.')
         return {'obs' : obs_hist,'action': action_hist, 'reward' : reward_hist}
+    
     def play_games(self, env=None):
         if env is None:
             env = gym.make(self.gamename)
