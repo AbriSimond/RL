@@ -24,14 +24,23 @@ class Wall:
         for x, y in zip(self.X,self.Y):
             surface.blit(image,(x*self.box_size, y*self.box_size))
 
+            
 class Apple:
     x = 0
     y = 0
 
     def __init__(self,x,y, game_size, box_size):
-        self.x = x
-        self.y = y
         self.game_size = game_size
+        if x is None:
+            self.x = randint(1,self.game_size[0]-2)
+        else:
+            self.x = x
+            
+        if y is None:
+            self.y = randint(1,self.game_size[0]-2)
+        else:
+            self.y = y
+            
         self.box_size = box_size
         self.board = np.zeros(game_size)
 
@@ -44,8 +53,10 @@ class Player:
     length = 2
 
     def __init__(self, length, game_size, box_size):
-        self.x = [3,2,1]
-        self.y = [2,2,2]
+        xh = randint(3,game_size[1]-2)
+        self.x = [xh,xh-1,xh-2]
+        yh = randint(2,game_size[0]-2)
+        self.y = [yh,yh,yh]
         self.length = length
         self.game_size = game_size
         self.box_size = box_size
@@ -96,8 +107,9 @@ class Snake:
         self.render = render
         self.time_reward = time_reward
         
-        pygame.init()
+        
         if render:
+            pygame.init()
             self._display_surf = pygame.display.set_mode((self.windowWidth,self.windowHeight), pygame.HWSURFACE)
             pygame.display.set_caption('snake game to train agents in')
 
@@ -116,7 +128,7 @@ class Snake:
 
     def on_init(self):
         self.player = Player(3, self.game_size, self.box_size)
-        self.apple = Apple(3,3, self.game_size, self.box_size)
+        self.apple = Apple(None,None, self.game_size, self.box_size)
         self.wall = Wall(self.game_size, self.box_size)
 
         self._running = True
@@ -127,9 +139,9 @@ class Snake:
         state = np.zeros((3, self.game_size[0],self.game_size[1]))
 
         k = 0 # PLAYER
-        for i in range(self.player.length):
+        for i in reversed(range(self.player.length)):
             if not self.player.y[i]<0:
-                state[k, self.player.y[i], self.player.x[i]] = ( self.player.length - i)/self.player.length
+                state[k, self.player.y[i], self.player.x[i]] = 0.5 + 0.5*(i==0)
 
         k = 1 # APPLE
         state[k, self.apple.y, self.apple.x] = 1
@@ -146,6 +158,7 @@ class Snake:
         self.apple.draw(self._display_surf, self._apple_surf)
         self.wall.draw(self._display_surf, self._wall_surf)
         pygame.display.flip()
+        time.sleep (50.0 / 1000.0)
 
     def on_loop(self):
         self.player.update()
