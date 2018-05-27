@@ -92,8 +92,12 @@ class Player:
     def moveDown(self):
         self.direction = 3
 
-    def draw(self, surface, image):
-        for i in range(0,self.length):
+    def draw(self, surface, image, image_head = None):
+        if image_head is None:
+            image_head = image
+        for i in range(1):
+            surface.blit(image_head,(self.x[i]*self.box_size,self.y[i]*self.box_size))
+        for i in range(1,self.length):
             surface.blit(image,(self.x[i]*self.box_size,self.y[i]*self.box_size))
 
 class Snake:
@@ -117,7 +121,9 @@ class Snake:
         apple_img = 130*np.ones((self.box_size-1,self.box_size-1))
         wall_img = 50* np.ones((self.box_size-1,self.box_size-1))
         snake_img = 200* np.ones((self.box_size-1,self.box_size-1))
-        self._image_surf = pygame.surfarray.make_surface(snake_img)
+        snake_head_img = 205* np.ones((self.box_size-1,self.box_size-1))
+        self._snake_surf = pygame.surfarray.make_surface(snake_img)
+        self._snake_head_surf = pygame.surfarray.make_surface(snake_head_img)
         self._wall_surf = pygame.surfarray.make_surface(wall_img)
         self._apple_surf = pygame.surfarray.make_surface(apple_img)
 
@@ -154,7 +160,7 @@ class Snake:
 
     def on_render(self):
         self._display_surf.fill((0,0,0))
-        self.player.draw(self._display_surf, self._image_surf)
+        self.player.draw(self._display_surf, self._snake_surf, self._snake_head_surf)
         self.apple.draw(self._display_surf, self._apple_surf)
         self.wall.draw(self._display_surf, self._wall_surf)
         pygame.display.flip()
