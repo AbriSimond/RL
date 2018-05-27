@@ -63,8 +63,7 @@ class Karpathy_Agent:
         
     def process_one_game(self,onegame):
         discounted_rewards = discount_rewards(onegame['reward'])
-        discounted_rewards -= np.mean(discounted_rewards)
-        discounted_rewards /= np.std(discounted_rewards)
+
         
         obs = onegame['obs']
         obs_proc = np.zeros((obs.shape[0],6400))
@@ -82,6 +81,9 @@ class Karpathy_Agent:
     
     def fit_games(self,game_result):
         dat = concat_games(game_result)
+        
+        dat['reward_discounted'] -= np.mean(dat['reward_discounted'])
+        dat['reward_discounted'] /= np.std(dat['reward_discounted'])
         self.model.train_on_batch(dat['obs'],
                                   dat['action'],
                                   sample_weight=dat['reward_discounted'])

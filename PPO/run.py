@@ -1,4 +1,4 @@
-import PlayGame
+import PlayGame#File as PlayGame
 import karpathy_agent as agent
 
 from importlib import reload
@@ -12,6 +12,6 @@ games.agent.replays = games.replays
 import gym
 env = gym.make("Pong-v0")
 while True:
-    game_result = games.play_games(env)
+    game_result = games.play_multiple_games(env)
     games.agent.fit_games(game_result)
 
