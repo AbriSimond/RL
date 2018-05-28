@@ -37,3 +37,20 @@ def keyboard_agent(state=None):
 
     elif (keys[K_ESCAPE]):
         return "escape"
+
+def random_legal_move(state):
+    y, x = max_idx(state[0,:,:])
+    legal_moves = ((state[0,] + state[2,]) == 0)
+    
+    test_coord = {
+        'left' : (y,x-1),
+        'right' : (y,x+1),
+        'up' : (y-1, x),
+        'down' : (y+1, x)}
+
+    sample_space = [move for move, (y,x) in test_coord.items() if legal_moves[y,x]]
+    
+    if len(sample_space) > 0:
+        return np.random.choice(sample_space)
+    else:
+        return 'down'
