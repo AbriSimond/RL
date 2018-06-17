@@ -8,23 +8,27 @@ import agents
 
 ### WALL ###
 class Wall:
-    def __init__(self,game_size,box_size):
+    def __init__(self,game_size,box_size, random_wall = False):
         self.box_size = box_size
         self.game_size = game_size
-        self.X, self.Y = self.make_wall(game_size[0]-1, game_size[1]-1)
+        self.X, self.Y = self.make_wall(game_size[0]-1, game_size[1]-1, random_wall)
 
-    def make_wall(self, x_size,y_size):
+    def make_wall(self, x_size,y_size, random_wall = True):
         x = np.concatenate([np.array(range(x_size)),np.array(range(x_size)),
                             np.repeat(0,y_size), np.repeat(x_size,y_size)])
         y = np.concatenate([np.repeat(0,y_size), np.repeat(y_size, x_size),
                             np.array(range(y_size)), np.array(range(y_size))])
+
+        if random_wall:
+            x = np.append(x, [np.random.randint(x_size) for _ in range(5)])
+            y = np.append(y, [np.random.randint(y_size) for _ in range(5)])
         return x, y
 
     def draw(self, surface, image):
         for x, y in zip(self.X,self.Y):
             surface.blit(image,(x*self.box_size, y*self.box_size))
 
-            
+
 class Apple:
     x = 0
     y = 0
@@ -35,12 +39,12 @@ class Apple:
             self.x = randint(1,self.game_size[0]-2)
         else:
             self.x = x
-            
+
         if y is None:
             self.y = randint(1,self.game_size[0]-2)
         else:
             self.y = y
-            
+
         self.box_size = box_size
         self.board = np.zeros(game_size)
 
@@ -102,16 +106,16 @@ class Player:
 
 class Snake:
     # Render parameters
-    windowHeight = 500
-    windowWidth = 500
+    windowHeight = 1000
+    windowWidth = 1000
     box_size = 20
 
     def __init__(self, render = True, game_size = (10,10), time_reward = -0.02):
         self.game_size = game_size
         self.render = render
         self.time_reward = time_reward
-        
-        
+
+
         if render:
             pygame.init()
             self._display_surf = pygame.display.set_mode((self.windowWidth,self.windowHeight), pygame.HWSURFACE)
