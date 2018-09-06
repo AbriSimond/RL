@@ -12,43 +12,9 @@ from torch import optim
 import numpy as np
 import utils
 
-## GAMEPLAY
-def play_game(env = wrap_deepmind(gym.make("Pong-v0"), frame_stack = True), agent = None, skipframe = 4, th = 0, maxstep = 5000, render = False):
-    cum_reward = 0.0
-    render_frames = []
-    state = env.reset()
-    
-
-    for i in range(maxstep):
-        # take action:
-        action = agent(state, th = th)
-        reward = 0
-        for _ in range(skipframe):
-            next_state, r, ended, info = env.step(action)
-            reward += r
-            if ended:
-                break
-        
-        cum_reward += float(reward)
-        
-        # push to replay buffer:
-        memory.push(state, action, next_state, reward, ended)
-        state = next_state
-        
-        if render:
-            if i % 1 == 0:
-                render_frames.append(torch.from_numpy(env.render(mode="rgb_array")).unsqueeze(0))
-        if ended == 1:
-            break
-            
-    out = {'cum_reward' : cum_reward, 'steps' :  i}
-    if render:
-        out['frames'] = torch.cat(render_frames).permute(3,0,1,2).unsqueeze(0)
-    return out
 
 
 ## AGENTS ##
-
 def random_agent(state, th = None):
     return random.randint(a=0,b=env.action_space.n-1)
 
@@ -123,7 +89,7 @@ if __name__ == "__main__":
              'batch_size' : 32,
              'lr' : 0.0001,
             'GAMMA' : 0.95,
-            'replay_buffer' : 50000,
+            'replay_buffer' : 500000,
             'exp_length' : 1000000}
     param['version'] = ", ".join([ "{}:{}".format(key,val) for key, val in param.items()]) + " "+str(datetime.datetime.now())[:16]
     print(param['version'])
@@ -140,42 +106,37 @@ if __name__ == "__main__":
 
     # Warmup buffer
     for _ in range(5):
-        game = play_game(env, agent = dqn_epsilon_agent, th = eps.get(0))
+        game = utils.play_game(env, agent = dqn_epsilon_agent, th = eps.get(0), memory = memory)
 
     step = 0
-    loss, rewards, episode_steps = {}, {}, {}
-    episode = 0
+    metrics = {}
+    metrics['episode'] = 0
     while True:
-        episode += 1
+        metrics['episode'] += 1
 
         ## PLAY GAME
-        game = play_game(env, agent = dqn_epsilon_agent, th = eps.get(step))
-        rewards['run_reward'], episode_steps['run_episode_steps'] = game['cum_reward'], game['steps']
-        step += episode_steps['run_episode_steps']
+        game = utils.play_game(env, agent = dqn_epsilon_agent, th = eps.get(step), memory = memory)
+        metrics['run_reward'], metrics['run_episode_steps'] = game['cum_reward'], game['steps']
+        step += metrics['run_episode_steps']
 
         ## TRAIN
-        for _ in range(episode_steps['run_episode_steps']//param['batch_size']):
-            loss['run_loss'] = train_batch(param)
-
+        for _ in range(metrics['run_episode_steps']//param['batch_size']):
+            metrics['run_loss'] = train_batch(param)
 
         # Test agent:
-        if episode % 10 == 0:
-            game = play_game(env, agent = dqn_epsilon_agent, th = 0.02)
-            rewards['test_reward'], episode_steps['test_episode_steps'] = game['cum_reward'], game['steps']
-            checkpoint.save(dqn, step = step, step_loss = -rewards['test_reward'])
+        if metrics['episode'] % 100 == 0:
+            game = utils.play_game(env, agent = dqn_epsilon_agent, th = 0.02, memory = memory)
+            metrics['test_reward'], metrics['test_episode_steps'] = game['cum_reward'], game['steps']
+            checkpoint.save(dqn, step = step, step_loss = -metrics['test_reward'])
 
 
         # REPORTING
-        if episode % 5 == 0:
-            writer.add_scalars("loss", tag_scalar_dict=loss, global_step= step)
-            writer.add_scalars("rewards", rewards, step)
-            writer.add_scalar("episode", episode, global_step = step)
-            writer.add_scalar("episode_length", episode_steps['run_episode_steps'], global_step = step)
-            writer.add_scalar("epsilon", eps.get(step), global_step = step)
-
-
+        if metrics['episode'] % 100 == 0:
+            for key, val in metrics.items():
+                writer.add_scalar(key, val, global_step = step)
+                
         # Animate agent:
-        if episode % 500 == 0:
-            print("episode: {}, step: {}, reward: {}".format(episode, step, rewards['run_reward']))
-            game = play_game(env, agent = dqn_epsilon_agent, th = 0.02, render = True)
+        if metrics['episode'] % 2500 == 0:
+            print("episode: {}, step: {}, reward: {}".format(metrics['episode'], step, metrics['run_reward']))
+            game = utils.play_game(env, agent = dqn_epsilon_agent, th = 0.02, render = True, memory = memory)
             writer.add_video("test_game", game['frames'], global_step = step)

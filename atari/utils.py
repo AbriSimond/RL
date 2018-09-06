@@ -2,6 +2,8 @@ import os
 import torch
 import random
 from collections import namedtuple
+from wrappers import wrap_deepmind
+import gym
 
 ## REPLAY MEMORY
 Transition = namedtuple('Transition',
@@ -62,3 +64,38 @@ class EpsilonDecay():
         
     def get(self, step):
         return max(self.start_eps + self.decay*step, self.end_eps)
+    
+    
+## GAMEPLAY
+def play_game(env = wrap_deepmind(gym.make("Pong-v0"), frame_stack = True), agent = None, skipframe = 4, th = 0, maxstep = 5000, render = False, memory = ReplayMemory(50000)):
+    cum_reward = 0.0
+    render_frames = []
+    state = env.reset()
+    
+
+    for i in range(maxstep):
+        # take action:
+        action = agent(state, th = th)
+        reward = 0
+        for _ in range(skipframe):
+            next_state, r, ended, info = env.step(action)
+            reward += r
+            if ended:
+                break
+        
+        cum_reward += float(reward)
+        
+        # push to replay buffer:
+        memory.push(state, action, next_state, reward, ended)
+        state = next_state
+        
+        if render:
+            if i % 1 == 0:
+                render_frames.append(torch.from_numpy(env.render(mode="rgb_array")).unsqueeze(0))
+        if ended == 1:
+            break
+            
+    out = {'cum_reward' : cum_reward, 'steps' :  i}
+    if render:
+        out['frames'] = torch.cat(render_frames).permute(3,0,1,2).unsqueeze(0)
+    return out
