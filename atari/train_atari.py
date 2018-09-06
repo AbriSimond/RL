@@ -11,19 +11,13 @@ import model
 from torch import optim
 import numpy as np
 import utils
-
+import copy
 
 
 ## AGENTS ##
 def random_agent(state, th = None):
     return random.randint(a=0,b=env.action_space.n-1)
 
-def dqn_epsilon_agent(state, th = 0.05):
-    if random.random() > th:
-        yhat = dqn(default_states_preprocessor(state))
-        return int(yhat.argmax().cpu().numpy())
-    else:
-        return env.action_space.sample()
     
     
 ## PREPROC AND TRAIN ##
@@ -61,7 +55,7 @@ def train_batch(param):
         not_ended_batch = 1 -torch.ByteTensor(batch_ended).to(device)
         next_states_non_final = batch_next_states[not_ended_batch]
         next_state_values = torch.zeros(param['batch_size']).to(device)
-        reward_hat = dqn(next_states_non_final)
+        reward_hat = target_dqn(next_states_non_final)
         next_state_values[not_ended_batch] = reward_hat.max(1)[0]
         expected_state_action_values = next_state_values*param['GAMMA'] + batch_rewards
 
@@ -81,7 +75,7 @@ if __name__ == "__main__":
     
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env", help="increase output verbosity", default = "MsPacman-v0")
+    parser.add_argument("--env", help="increase output verbosity", default = "Pong-v0")
     args = parser.parse_args()
     print(args)
     
@@ -102,6 +96,15 @@ if __name__ == "__main__":
 
     env = wrap_deepmind(gym.make(param['env']), frame_stack = True)
     dqn = model.DQN(num_actions = env.action_space.n).to(device)
+    target_dqn = copy.deepcopy(dqn)
+    
+    def dqn_epsilon_agent(state, net = target_dqn, th = 0.05):
+        if random.random() > th:
+            yhat = net(default_states_preprocessor(state))
+            return int(yhat.argmax().cpu().numpy())
+        else:
+            return env.action_space.sample()
+
     optimizer = optim.Adam(dqn.parameters(), lr = param['lr'])
 
     # Warmup buffer
@@ -122,6 +125,9 @@ if __name__ == "__main__":
         ## TRAIN
         for _ in range(metrics['run_episode_steps']//param['batch_size']):
             metrics['run_loss'] = train_batch(param)
+            
+        if metrics['episode'] % 500 == 0:
+            target_dqn = copy.deepcopy(dqn)
 
         # Test agent:
         if metrics['episode'] % 100 == 0:
