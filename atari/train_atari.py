@@ -98,7 +98,7 @@ if __name__ == "__main__":
     dqn = model.DQN(num_actions = env.action_space.n).to(device)
     target_dqn = copy.deepcopy(dqn)
     
-    def dqn_epsilon_agent(state, net = target_dqn, th = 0.05):
+    def dqn_epsilon_agent(state, net = dqn, th = 0.05):
         if random.random() > th:
             yhat = net(default_states_preprocessor(state))
             return int(yhat.argmax().cpu().numpy())
@@ -118,7 +118,8 @@ if __name__ == "__main__":
         metrics['episode'] += 1
 
         ## PLAY GAME
-        game = utils.play_game(env, agent = dqn_epsilon_agent, th = eps.get(step), memory = memory)
+        metrics['epsilon'] = eps.get(step)
+        game = utils.play_game(env, agent = dqn_epsilon_agent, th = metrics['epsilon'], memory = memory)
         metrics['run_reward'], metrics['run_episode_steps'] = game['cum_reward'], game['steps']
         step += metrics['run_episode_steps']
 
@@ -127,6 +128,7 @@ if __name__ == "__main__":
             metrics['run_loss'] = train_batch(param)
             
         if metrics['episode'] % 500 == 0:
+            del target_dqn
             target_dqn = copy.deepcopy(dqn)
 
         # Test agent:
