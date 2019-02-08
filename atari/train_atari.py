@@ -84,13 +84,14 @@ if __name__ == "__main__":
              'lr' : 0.0001,
             'GAMMA' : 0.95,
             'replay_buffer' : 500000,
-            'exp_length' : 1000000}
+             'end_eps' : 0.1,
+            'exp_length' : 2000000}
     param['version'] = ", ".join([ "{}:{}".format(key,val) for key, val in param.items()]) + " "+str(datetime.datetime.now())[:16]
     print(param['version'])
 
     memory = utils.ReplayMemory(param['replay_buffer'])
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    eps = utils.EpsilonDecay(start_eps = 1.0, end_eps = 0.05, length = param['exp_length'])
+    eps = utils.EpsilonDecay(start_eps = 1.0, end_eps = param['end_eps'], length = param['exp_length'])
     writer = SummaryWriter(log_dir = "tensorboard/" + param['version'])
     checkpoint = utils.CheckpointIfBetter(param, device)
 
@@ -128,8 +129,7 @@ if __name__ == "__main__":
             metrics['run_loss'] = train_batch(param)
             
         if metrics['episode'] % 500 == 0:
-            del target_dqn
-            target_dqn = copy.deepcopy(dqn)
+            target_dqn.load_state_dict(dqn.state_dict())
 
         # Test agent:
         if metrics['episode'] % 100 == 0:
